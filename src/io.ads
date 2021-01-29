@@ -5,6 +5,7 @@ package IO is
 
    procedure Open_Input (Fn : String);
    procedure Open_Output (Fn : String);
+   function Input_Exhausted return Boolean;
    procedure Get (X : out Input);
    procedure Put (X : Output);
    procedure Close_All;

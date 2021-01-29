@@ -2,6 +2,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Hash;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with IO; use IO;
+with Ada.Text_IO;
 
 package body Compress is
 
@@ -24,26 +25,41 @@ package body Compress is
       Map.Insert (S, Counter);
       Counter := Counter + 1;
    end Insert;
+   
+   procedure Init_Map is
+   begin
+      for C in Input loop
+         Insert (Null_Unbounded_String & C);
+      end loop;
+   end Init_Map;
 
    procedure Compress is
       S : Unbounded_String;
       C : Character;
+      Key : Output := 0;
    begin
-      while True loop
+      while not IO.Input_Exhausted loop
          Get (C);
-         declare
-            Key : Output := Lookup (S & C);
-         begin
-            --  ??? incorrect to use Output'Last
+         Ada.Text_IO.Put_Line ("input is " & C);
+         Key := Lookup (S & C);
+
+         --  ??? incorrect to use Output'Last
             
-            if Key /= Output'Last then
-               S := S & C;
-            else
+         if Key /= Output'Last then
+            S := S & C;
+         else
+            declare
+               Op : constant Output := Lookup (S);
+            begin
+               Ada.Text_IO.Put_Line 
+                 ("found entry " & To_String (S) & ", output " & Op'Img
+                  & ", creating new entry for " & To_String (S & C));
                Insert (S & C);
-               Put (Key);
-               S := Null_Unbounded_String;
-            end if;
-         end;
+               Put (Op);
+            end;
+
+            S := Null_Unbounded_String;
+         end if;
       end loop;
    end Compress;
 

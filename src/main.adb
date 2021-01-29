@@ -10,6 +10,7 @@ begin
    else
       IO.Open_Input (Ada.Command_Line.Argument (1));
       IO.Open_Output (Ada.Command_Line.Argument (2));
+      Compress.Init_Map;
       Compress.Compress;
       IO.Close_All;
    end if;
