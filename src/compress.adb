@@ -1,8 +1,11 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Hash;
 with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Vectors;
 with Ada.Direct_IO;
 with Ada.Text_IO;
+
+use type Ada.Containers.Count_Type;
 
 package body Compress is
 
@@ -12,11 +15,16 @@ package body Compress is
       Hash            => Ada.Strings.Unbounded.Hash,
       Equivalent_Keys => "=");
    
+   package Decode_Maps is new Ada.Containers.Vectors
+     (Index_Type => Natural,
+      Element_Type => Unbounded_String);
+   
    package Regular_IO is new Ada.Direct_IO (Input);
    package Compressed_IO is new Ada.Direct_IO (Output);
    
   
    Map : My_Maps.Map;
+   Decode_Map : Decode_Maps.Vector;
    Counter : Output := 0;
    
    procedure Lookup 
@@ -36,19 +44,14 @@ package body Compress is
                             Found : out Boolean;
                             S : out Unbounded_String)
    is
-      use My_Maps;
-      C : Cursor := First (Map);
+      use Decode_Maps;
    begin
-      while Has_Element (C) loop
-         if Element (C) = Key then
-            Found := True;
-            S := My_Maps.Key (C);
-            return;
-         end if;
-         Next (C);
-      end loop;
-      Found := False;
-      S := Null_Unbounded_String;
+      if Decode_Map.Length <= Ada.Containers.Count_Type (Key) then
+         Found := False;
+      else
+         S := Decode_Map.Element (Natural (Key));
+         Found := True;
+      end if;
    end Lookup_Output;
 
    
@@ -59,13 +62,20 @@ package body Compress is
       end if;
       pragma Assert (not Map.Contains (S));
       Map.Insert (S, Counter);
+      --  TODO what if all codes are used?
       Counter := Counter + 1;
    end Insert;
+   
+   procedure Insert_Decode (S : Unbounded_String) is
+   begin
+      Decode_Map.Append (S);
+   end Insert_Decode;
    
    procedure Init_Map is
    begin
       for C in Input loop
          Insert (Null_Unbounded_String & C);
+         Insert_Decode (Null_Unbounded_String & C);
       end loop;
    end Init_Map;
 
@@ -125,7 +135,7 @@ package body Compress is
                --  This test is there to skip inserting after the first code.
                --  Test should be true only in the first iteration.
                if S /= Null_Unbounded_String then
-                  Insert (S & Element (T, 1));
+                  Insert_Decode (S & Element (T, 1));
                end if;
                S := T;
             else
@@ -134,7 +144,7 @@ package body Compress is
                declare
                   U : Unbounded_String := S & Element (S, 1);
                begin
-                  Insert (U);
+                  Insert_Decode (U);
                   S := U;
                   for J in 1 .. Length (U) loop
                      Regular_IO.Write (Output_File, Element (U, J));
