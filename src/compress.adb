@@ -4,17 +4,13 @@ with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Direct_IO;
 with Ada.Text_IO;
+with Trie;
 
 use type Ada.Containers.Count_Type;
 
 package body Compress is
 
-   package My_Maps is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => Unbounded_String,
-      Element_Type    => Output,
-      Hash            => Ada.Strings.Unbounded.Hash,
-      Equivalent_Keys => "=");
-   
+  
    package Decode_Maps is new Ada.Containers.Vectors
      (Index_Type => Natural,
       Element_Type => Unbounded_String);
@@ -22,21 +18,31 @@ package body Compress is
    package Regular_IO is new Ada.Direct_IO (Input);
    package Compressed_IO is new Ada.Direct_IO (Output);
    
-  
-   Map : My_Maps.Map;
+
+   T : Trie.Trie;
+   
    Decode_Map : Decode_Maps.Vector;
    Counter : Output := 0;
    
    procedure Lookup 
-     (S : Unbounded_String;
+     (S : String;
       Has_Entry : out Boolean;
       Key : in out Output) is
    begin
-      if Map.Contains (S) then 
+      if S = "" & ASCII.NUL then
          Has_Entry := True;
-         Key := Map.Element (S);
+         Key := 0;
       else
-         Has_Entry := False;
+         declare
+            N : Natural := Trie.Find (T, S);
+         begin
+            if N = 0 then
+               Has_Entry := False;
+            else
+               Has_Entry := True;
+               Key := Output (N);
+            end if;
+         end;
       end if;
    end Lookup;
    
@@ -55,13 +61,18 @@ package body Compress is
    end Lookup_Output;
 
    
-   procedure Insert (S : Unbounded_String) is
+   procedure Insert (S : String) is
    begin
       if Debug then
-         Ada.Text_IO.Put_Line ("inserting " & To_String (S));
+         Ada.Text_IO.Put_Line ("inserting " & S);
       end if;
-      pragma Assert (not Map.Contains (S));
-      Map.Insert (S, Counter);
+      if S = "" & ASCII.NUL then
+         null;
+      else
+         if Counter /= 0 then
+            Trie.Insert (T, S, Positive (Counter));
+         end if;
+      end if;
       --  TODO what if all codes are used?
       Counter := Counter + 1;
    end Insert;
@@ -74,15 +85,15 @@ package body Compress is
    procedure Init_Map is
    begin
       for C in Input loop
-         Insert (Null_Unbounded_String & C);
+         Insert ("" & C);
          Insert_Decode (Null_Unbounded_String & C);
       end loop;
    end Init_Map;
 
    procedure Compress (In_Fn, Out_Fn : String)
    is
-      S           : Unbounded_String;
-      C           : Character;
+      Buf         : String (1 .. 1000);
+      Buf_Len     : Natural := 0;
       Key         : Output := 0;
       Has_Entry   : Boolean;
       Input_File  : Regular_IO.File_Type;
@@ -91,21 +102,22 @@ package body Compress is
       Regular_IO.Open (Input_File, Regular_IO.In_File, In_Fn);
       Compressed_IO.Create (Output_File, Compressed_IO.Out_File, Out_Fn);
       while not Regular_IO.End_Of_File (Input_File) loop
-         Regular_IO.Read (Input_File, C);
-         Lookup (S & C, Has_Entry, Key);
+         Regular_IO.Read (Input_File, Buf (Buf_Len + 1));
+         Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, Key);
 
          if Has_Entry then
-            S := S & C;
+            Buf_Len :=  Buf_Len + 1;
          else
-            Insert (S & C);
-            Lookup (S, Has_Entry, Key);
+            Insert (Buf (1 .. Buf_Len + 1));
+            Lookup (Buf (1 .. Buf_Len), Has_Entry, Key);
             pragma Assert (Has_Entry);
             Compressed_IO.Write (Output_File, Key);
-            S := Null_Unbounded_String & C;
+            Buf (1) := Buf (Buf_Len + 1);
+            Buf_Len := 1;
          end if;
       end loop;
-      --  account for last character
-      Lookup (S, Has_Entry, Key);
+      --  account for remaining buffer
+      Lookup (Buf (1 .. Buf_Len), Has_Entry, Key);
       pragma Assert (Has_Entry);
       Compressed_IO.Write (Output_File, Key);
    end Compress;
