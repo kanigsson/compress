@@ -92,29 +92,28 @@ package body Compress is
 
    procedure Compress (In_Fn, Out_Fn : String)
    is
-      Buf         : String (1 .. 1000);
-      Buf_Len     : Natural := 0;
-      Key         : Output := 0;
-      Has_Entry   : Boolean;
-      Input_File  : Regular_IO.File_Type;
-      Output_File : Compressed_IO.File_Type;
+      Buf          : String (1 .. 1000);
+      Buf_Len      : Natural := 0;
+      Key, New_Key : Output := 0;
+      Has_Entry    : Boolean;
+      Input_File   : Regular_IO.File_Type;
+      Output_File  : Compressed_IO.File_Type;
    begin
       Regular_IO.Open (Input_File, Regular_IO.In_File, In_Fn);
       Compressed_IO.Create (Output_File, Compressed_IO.Out_File, Out_Fn);
       while not Regular_IO.End_Of_File (Input_File) loop
          Regular_IO.Read (Input_File, Buf (Buf_Len + 1));
-         Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, Key);
+         Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, New_Key);
 
          if Has_Entry then
             Buf_Len :=  Buf_Len + 1;
          else
             Insert (Buf (1 .. Buf_Len + 1));
-            Lookup (Buf (1 .. Buf_Len), Has_Entry, Key);
-            pragma Assert (Has_Entry);
             Compressed_IO.Write (Output_File, Key);
             Buf (1) := Buf (Buf_Len + 1);
             Buf_Len := 1;
          end if;
+         Key := New_Key;
       end loop;
       --  account for remaining buffer
       Lookup (Buf (1 .. Buf_Len), Has_Entry, Key);
