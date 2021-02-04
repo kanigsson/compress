@@ -4,6 +4,7 @@ with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Direct_IO;
 with Ada.Text_IO;
+with Ada.IO_Exceptions;
 with Trie;
 
 use type Ada.Containers.Count_Type;
@@ -101,20 +102,25 @@ package body Compress is
    begin
       Regular_IO.Open (Input_File, Regular_IO.In_File, In_Fn);
       Compressed_IO.Create (Output_File, Compressed_IO.Out_File, Out_Fn);
-      while not Regular_IO.End_Of_File (Input_File) loop
-         Regular_IO.Read (Input_File, Buf (Buf_Len + 1));
-         Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, New_Key);
+      begin
+         loop
+            Regular_IO.Read (Input_File, Buf (Buf_Len + 1));
+            Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, New_Key);
 
-         if Has_Entry then
-            Buf_Len :=  Buf_Len + 1;
-         else
-            Insert (Buf (1 .. Buf_Len + 1));
-            Compressed_IO.Write (Output_File, Key);
-            Buf (1) := Buf (Buf_Len + 1);
-            Buf_Len := 1;
-         end if;
-         Key := New_Key;
-      end loop;
+            if Has_Entry then
+               Buf_Len :=  Buf_Len + 1;
+            else
+               Insert (Buf (1 .. Buf_Len + 1));
+               Compressed_IO.Write (Output_File, Key);
+               Buf (1) := Buf (Buf_Len + 1);
+               Buf_Len := 1;
+            end if;
+            Key := New_Key;
+         end loop;
+      exception
+         when Ada.IO_Exceptions.End_Error =>
+            null;
+      end;
       --  account for remaining buffer
       Lookup (Buf (1 .. Buf_Len), Has_Entry, Key);
       pragma Assert (Has_Entry);
