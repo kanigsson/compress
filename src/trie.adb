@@ -17,11 +17,11 @@ package body Trie with SPARK_Mode is
 
    procedure Lemma_Empty_Trie (T : not null access constant Trie_Cell) with
      Ghost,
-     Pre => T.Value = 0 and (for all C in Character => T.Children (C) = null),
+     Pre => T.Value = 0 and (for all C in Byte => T.Children (C) = null),
      Post => Model_Get (T, W.all, W'Last - W'Length) = 0;
    --  Model_Get returns 0 on every word on a empty trie
 
-   procedure Lemma_Same_Up_To_Next (S1 : String; S2 : String_1; I : Positive)
+   procedure Lemma_Same_Up_To_Next (S1 : Byte_String; S2 : String_1; I : Positive)
    with
      Ghost,
      Pre  => I in S1'Range,
@@ -37,7 +37,7 @@ package body Trie with SPARK_Mode is
    --  Lemma: disjunction of cases linking Same_Up_To (S1, S2, I) to
    --    Same_Up_To (S1, S2, I - 1).
 
-   procedure Lemma_Same_Up_To_Last (S1 : String; S2 : String_1)
+   procedure Lemma_Same_Up_To_Last (S1 : Byte_String; S2 : String_1)
    with
      Ghost,
      Post =>
@@ -61,13 +61,13 @@ package body Trie with SPARK_Mode is
          = Model_Get (B.Children (W (I + 1)), W.all, I + 1));
    --  Lemma: unfold the definition of Model_Get to help proof
 
-   function Model_Get (T : Trie; K : String) return Natural with Ghost;
+   function Model_Get (T : Trie; K : Byte_String) return Natural with Ghost;
    --  Function representing the underlying map model of the trie. It returns
    --  0 if the key K is not associated to any value in the trie and the
    --  associated valie otherwise.
 
    function Model_Get (T   : access constant Trie_Cell;
-                       K   : String;
+                       K   : Byte_String;
                        Fst : Integer) return Natural
    is
      (if T = null then 0
@@ -79,7 +79,7 @@ package body Trie with SPARK_Mode is
    --  Annex model function giving the value associated to the suffix of
    --  a string K starting from Fst in a trie T.
 
-   function Same_Up_To (S1, S2 : String; I : Positive) return Boolean is
+   function Same_Up_To (S1, S2 : Byte_String; I : Positive) return Boolean is
      (S2'Length > I - S1'First
       and then
         (for all K in S1'First .. I => S1 (K) = S2 (K - S1'First + S2'First)))
@@ -97,10 +97,10 @@ package body Trie with SPARK_Mode is
          return;
       end if;
 
-      for C in Character loop
+      for C in Byte loop
          Erase (T.Children (C));
          pragma Loop_Invariant
-           (for all D in Character'First .. C => T.Children (D) = null);
+           (for all D in Byte'First .. C => T.Children (D) = null);
       end loop;
 
       Free_Cell (T);
@@ -110,7 +110,7 @@ package body Trie with SPARK_Mode is
    -- Find --
    ----------
 
-   function Find (T : Trie; K : String) return Natural  with
+   function Find (T : Trie; K : Byte_String) return Natural  with
      Refined_Post => Find'Result = Model_Get (T, K)
    is
    begin
@@ -144,7 +144,7 @@ package body Trie with SPARK_Mode is
    -- Insert --
    ------------
 
-   procedure Insert (T : in out Trie; K : String; Value : Positive) is
+   procedure Insert (T : in out Trie; K : Byte_String; Value : Positive) is
       Old_W : constant Natural := Model_Get (T, W.all, 0) with Ghost;
    begin
       if T = null then
@@ -210,14 +210,14 @@ package body Trie with SPARK_Mode is
    -- Lemma_Same_Up_To_Next --
    ---------------------------
 
-   procedure Lemma_Same_Up_To_Next (S1 : String; S2 : String_1; I : Positive)
+   procedure Lemma_Same_Up_To_Next (S1 : Byte_String; S2 : String_1; I : Positive)
    is null;
 
    ---------------------------
    -- Lemma_Same_Up_To_Last --
    ---------------------------
 
-   procedure Lemma_Same_Up_To_Last (S1 : String; S2 : String_1) is null;
+   procedure Lemma_Same_Up_To_Last (S1 : Byte_String; S2 : String_1) is null;
 
    ----------------------
    -- Lemma_Unfold_Get --
@@ -231,7 +231,7 @@ package body Trie with SPARK_Mode is
    -- Model_Get --
    ---------------
 
-   function Model_Get (T : Trie; K : String) return Natural is
+   function Model_Get (T : Trie; K : Byte_String) return Natural is
      (Model_Get (T, K, K'Last - K'Length));
 
 end Trie;

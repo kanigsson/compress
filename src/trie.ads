@@ -12,12 +12,16 @@ package Trie with SPARK_Mode is
    function Holds_No_Memory (T : Trie) return Boolean with Ghost;
    --  Return True if all memory held by T has been deallocated
 
-   subtype String_1 is String with
+   type Byte is mod 2 ** 8;
+
+   type Byte_String is array (Positive range <>) of Byte;
+
+   subtype String_1 is Byte_String with
      Ghost,
      Predicate => String_1'First = 1 and String_1'Last >= 0;
 
    type String_Access is not null access String_1 with Ghost;
-   W : String_Access := new String_1'("") with Ghost;
+   W : String_Access := new String_1'((1 .. 0 => <>)) with Ghost;
    --  Ghost variable standing for a universally quantified value in the
    --  postconditions of Insert and Erase.
 
@@ -28,15 +32,15 @@ package Trie with SPARK_Mode is
    procedure Erase (T : in out Trie) with
      Post => Find (T, W.all) = 0 and Holds_No_Memory (T);
 
-   function Find (T : Trie; K : String) return Natural;
+   function Find (T : Trie; K : Byte_String) return Natural;
 
-   procedure Insert (T : in out Trie; K : String; Value : Positive) with
+   procedure Insert (T : in out Trie; K : Byte_String; Value : Positive) with
      Pre  => Find (T, K) = 0,
      Post => Find (T, K) = Value
      and (if K /= W.all then Find (T, W.all) = Find (T, W.all)'Old);
 
 private
-   --  A trie is a tree where each node has one child per character. Its
+   --  A trie is a tree where each node has one child per byte. Its
    --  Value field will be 0 if the word is not in the map, or the associated
    --  value otherwise.
 
@@ -44,7 +48,7 @@ private
 
    type Trie is access Trie_Cell;
 
-   type Cell_Array is array (Character) of Trie;
+   type Cell_Array is array (Byte) of Trie;
 
    type Trie_Cell is record
       Value    : Natural;
