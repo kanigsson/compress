@@ -5,7 +5,7 @@ with Ada.Containers.Vectors;
 with Ada.Direct_IO;
 with Ada.Text_IO;
 with Ada.IO_Exceptions;
-with Trie;
+with Trie_List;
 
 use type Ada.Containers.Count_Type;
 
@@ -20,7 +20,7 @@ package body Compress is
    package Compressed_IO is new Ada.Direct_IO (Output);
    
 
-   T : Trie.Trie;
+   T : Trie_List.Trie;
    
    Decode_Map : Decode_Maps.Vector;
    Counter : Output := 0;
@@ -35,7 +35,7 @@ package body Compress is
          Key := 0;
       else
          declare
-            N : Natural := Trie.Find (T, S);
+            N : Natural := Trie_List.Find (T, S);
          begin
             if N = 0 then
                Has_Entry := False;
@@ -71,7 +71,7 @@ package body Compress is
          null;
       else
          if Counter /= 0 then
-            Trie.Insert (T, S, Positive (Counter));
+            Trie_List.Insert (T, S, Positive (Counter));
          end if;
       end if;
       --  TODO what if all codes are used?
