@@ -76,9 +76,6 @@ package body Compress is
    
    procedure Insert (S : Trie.Byte_String) is
    begin
-      Ada.Text_IO.Put_Line 
-        ("mapping " & Byte_String_To_String (S)
-         & " to " & Counter'Img);
       Code_Map.Insert (S, Counter);
       Counter := Counter + 1;
    end Insert;
@@ -86,9 +83,6 @@ package body Compress is
    procedure Insert_Decode (S : Trie.Byte_String) is
    begin
       Decode_Map.Append (S);
-      Ada.Text_IO.Put_Line 
-        ("decoding " & Byte_String_To_String (S)
-         & " to " & Decode_Map.Length'Img);
    end Insert_Decode;
    
    procedure Init_Map is
@@ -113,23 +107,19 @@ package body Compress is
       begin
          loop
             Regular_IO.Read (Input_File, Buf (Buf_Len + 1));
-            Ada.Text_IO.Put_Line ("reading char" & Buf (Buf_Len + 1)'Img);
             Lookup (Buf (1 .. Buf_Len + 1), Has_Entry, New_Key);
 
             if Has_Entry then
-               Ada.Text_IO.Put_Line 
-                 ("current string " 
-                  & Byte_String_To_String (Buf (1 .. Buf_Len + 1))
-                  & " already in map with code "
-                    & New_Key'Img & ", continue");
                Buf_Len :=  Buf_Len + 1;
-               Key := New_Key;
             else
                Insert (Buf (1 .. Buf_Len + 1));
-               Ada.Text_IO.Put_Line ("writing code " & Key'Img);
                Compressed_IO.Write (Output_File, Key);
                Buf (1) := Buf (Buf_Len + 1);
+               Buf_Len := 1;
+               Lookup (Buf (1 .. 1), Has_Entry, New_Key);
+               pragma Assert (Has_Entry);
             end if;
+            Key := New_Key;
          end loop;
       exception
          when Ada.IO_Exceptions.End_Error =>

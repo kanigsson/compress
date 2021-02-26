@@ -1,7 +1,7 @@
 package Compress is
 
    subtype Input is Character;
-   type Output is mod 2 ** 16;
+   type Output is mod 2 ** 20;
 
    Debug : Boolean := False;
 
